@@ -1,0 +1,72 @@
+NAME
+    PAP::Parser - Profile Anything Protocol Parser
+
+VERSION
+    Version 0.01
+
+SYNOPSIS
+    This module provides a parser for Profile Anything Protocol.
+
+        use PAP::Parser;
+
+        my $parser = PAP::Parser->new();
+        $parser->slurp_file("samples.pap");
+        my $samples = $p->Run;
+
+METHODS
+  "input"
+    Set the PAP string to parse. The actual parsing is done using "Run".
+
+  "slurp_file"
+    Read a PAP file to parse. The actual parsing is done using "Run".
+
+  "Run"
+    Parse the data provided by a previous call to either "input" or
+    "slurp_file".
+
+    The methods described above are provided by Parse::Eyapp::Driver. You
+    may be able to find some other useful methods described there.
+
+AUTHOR
+    "Michael Zedeler", "<"michael at zedeler.dk">"
+
+BUGS
+    Please report any bugs or feature requests to "bug-pap-parser at
+    rt.cpan.org", or through the web interface at
+    <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=PAP-Parser>. I will be
+    notified, and then you'll automatically be notified of progress on your
+    bug as I make changes.
+
+SUPPORT
+    You can find documentation for this module with the perldoc command.
+
+        perldoc PAP::Parser
+
+    You can also look for information at:
+
+    *   RT: CPAN's request tracker
+
+        <http://rt.cpan.org/NoAuth/Bugs.html?Dist=PAP-Parser>
+
+    *   AnnoCPAN: Annotated CPAN documentation
+
+        <http://annocpan.org/dist/PAP-Parser>
+
+    *   CPAN Ratings
+
+        <http://cpanratings.perl.org/d/PAP-Parser>
+
+    *   Search CPAN
+
+        <http://search.cpan.org/dist/PAP-Parser/>
+
+ACKNOWLEDGEMENTS
+LICENSE AND COPYRIGHT
+    Copyright 2011 "Michael Zedeler".
+
+    This program is free software; you can redistribute it and/or modify it
+    under the terms of either: the GNU General Public License as published
+    by the Free Software Foundation; or the Artistic License.
+
+    See http://dev.perl.org/licenses/ for more information.
+

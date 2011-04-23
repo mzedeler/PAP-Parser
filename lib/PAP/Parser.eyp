@@ -1,0 +1,207 @@
+# This is a grammar file for Parse::Eyapp
+# To create a new version of Parser.pm in this directory, run this command:
+#
+#   eyapp -m PAP::Parser -v -C Parser.eyp
+#
+# Take a look in Parser.output if there are any warnings.
+#
+# For more information, look at the manual page for Parse::Eyapp
+#
+
+# TODO Warn if Parser.pm is stale because this files has been modified
+
+
+# ########################################################################### #
+#                                                                             #
+# Token definitions                                                           #
+#                                                                             #
+# ########################################################################### #
+
+%whites /([ \t]+)/
+%token PAP_VERSION
+%token YAML_SECTION
+%token SAMPLE
+%token COUNT
+
+%%
+
+
+# ########################################################################### #
+#                                                                             #
+# Grammar definitions                                                         #
+#                                                                             #
+# ########################################################################### #
+
+input:      header body             { 
+                                        shift;
+                                        return { %{$_[0]}, %{$_[1]} };
+                                    }
+;
+
+header:     PAP_VERSION.version     
+            YAML_SECTION?.meta      {
+                                        {
+                                            version => $version,
+                                            meta    => $meta->[0]   
+                                        }
+                                     }
+;
+
+body:       count.count samples.samples { { count => $count, samples => @$samples }}
+    |       samples.samples count.count { { count => $count, samples => @$samples }}
+;
+
+samples:    sample                      { shift; [@_] }
+    |       sample samples              { shift; [$_[0], @{$_[1]}] }
+;
+
+sample:     SAMPLE.sample
+            YAML_SECTION?.meta          { return {%$sample, ((ref $meta eq 'HASH') ? (%{$meta->[0]}) : ())} }
+;
+
+count:      COUNT.count                 { $count }
+;
+
+%%
+
+
+# ########################################################################### #
+#                                                                             #
+# Main                                                                        #
+#                                                                             #
+# ########################################################################### #
+
+use strict;
+use warnings;
+use Carp 'croak';
+use YAML::Any 'Load';
+our $VERSION = '0.01';
+
+
+# Custom lexer ############################################################## #
+
+__PACKAGE__->lexer(
+    sub {
+        my $parser = shift;
+        
+        for(${$parser->input}) {
+            m{\G\s*(\#.*)?}gc;
+
+            m{\Gpap\s+version\s+(\d+)\s*\R}igc and do {
+                return 'PAP_VERSION', $1;
+            };
+
+            m{\G(?<=  )---\R(.+?\R)  ...\R}sgc and do {
+                my $yaml = Load($1);
+                return 'YAML_SECTION', $yaml
+                    if ref $yaml eq 'HASH';
+                croak 'YAML top level must be associative.';
+            };
+
+            m{\G(\w+):\s*((?i)\d+(?:\.\d+)?(?:e[-+]\d+)?)(\s*(\S+))?\R}gc and do {
+                return 'SAMPLE', {
+                    handle => $1,
+                    value  => $2,
+                    ($3 ? (unit   => $3) : ())
+                };
+            };
+
+            m{\G1\.\.(\d+)\R}gc and do {
+                return 'COUNT', $1;
+            };
+            
+            return '', undef;
+        }
+    }
+);
+
+
+=head1 NAME
+
+PAP::Parser - Profile Anything Protocol Parser
+
+=head1 VERSION
+
+Version 0.01
+
+=head1 SYNOPSIS
+
+This module provides a parser for Profile Anything Protocol.
+
+    use PAP::Parser;
+
+    my $parser = PAP::Parser->new();
+    $parser->slurp_file("samples.pap");
+    my $samples = $p->Run;
+
+=head1 METHODS
+
+=head2 C<input>
+
+Set the PAP string to parse. The actual parsing is done using C<Run>.
+
+=head2 C<slurp_file>
+
+Read a PAP file to parse. The actual parsing is done using C<Run>.
+
+=head2 C<Run>
+
+Parse the data provided by a previous call to either C<input> or C<slurp_file>.
+
+The methods described above are provided by L<Parse::Eyapp::Driver>. You may
+be able to find some other useful methods described there.
+
+=head1 AUTHOR
+
+"Michael Zedeler", C<< <"michael at zedeler.dk"> >>
+
+=head1 BUGS
+
+Please report any bugs or feature requests to C<bug-pap-parser at rt.cpan.org>, or through
+the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=PAP-Parser>.  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc PAP::Parser
+
+
+You can also look for information at:
+
+=over 4
+
+=item * RT: CPAN's request tracker
+
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=PAP-Parser>
+
+=item * AnnoCPAN: Annotated CPAN documentation
+
+L<http://annocpan.org/dist/PAP-Parser>
+
+=item * CPAN Ratings
+
+L<http://cpanratings.perl.org/d/PAP-Parser>
+
+=item * Search CPAN
+
+L<http://search.cpan.org/dist/PAP-Parser/>
+
+=back
+
+=head1 ACKNOWLEDGEMENTS
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2011 "Michael Zedeler".
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
+
+See http://dev.perl.org/licenses/ for more information.
+
+=cut
+
+1; # End of PAP::Parser

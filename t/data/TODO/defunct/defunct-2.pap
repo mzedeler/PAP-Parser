@@ -1,0 +1,5 @@
+PAP Version 12
+1..3
+test: 21.0 seconds
+test2: 2 bonks
+# The count is wrong, which should be reported
