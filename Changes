@@ -1,6 +1,6 @@
 Revision history for PAP-Parser
 
-0.01    Date/time
-        First release: basic parser working, many errors not caught and
+0.01    First release: basic parser working, many errors not caught and
         interface not stable yet.
 
+0.02    Stabilizing interface, bugfixes, documentation.
