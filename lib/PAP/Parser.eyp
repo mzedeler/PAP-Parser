@@ -42,13 +42,13 @@ header:     PAP_VERSION.version
             YAML_SECTION?.meta      {
                                         {
                                             version => $version,
-                                            meta    => $meta->[0]   
+                                            (ref $meta eq 'ARRAY' and ref $meta->[0] eq 'HASH') ? %{$meta->[0]} : ()
                                         }
                                      }
 ;
 
-body:       count.count samples.samples { { count => $count, samples => @$samples }}
-    |       samples.samples count.count { { count => $count, samples => @$samples }}
+body:       count.count samples.samples { { count => $count, samples => $samples }}
+    |       samples.samples count.count { { count => $count, samples => $samples }}
 ;
 
 samples:    sample                      { shift; [@_] }
@@ -56,7 +56,7 @@ samples:    sample                      { shift; [@_] }
 ;
 
 sample:     SAMPLE.sample
-            YAML_SECTION?.meta          { return {%$sample, ((ref $meta eq 'HASH') ? (%{$meta->[0]}) : ())} }
+            YAML_SECTION?.meta          { return {%$sample, ((ref $meta eq 'ARRAY' and ref $meta->[0] eq 'HASH') ? (%{$meta->[0]}) : ())} }
 ;
 
 count:      COUNT.count                 { $count }
@@ -98,7 +98,7 @@ __PACKAGE__->lexer(
                 croak 'YAML top level must be associative.';
             };
 
-            m{\G(\w+):\s*((?i)\d+(?:\.\d+)?(?:e[-+]\d+)?)(\s*(\S+))?\R}gc and do {
+            m{\G(\w+):\s*((?i)\d+(?:\.\d+)?(?:e[-+]\d+)?)(?:\s*(\S+))?\R}gc and do {
                 return 'SAMPLE', {
                     handle => $1,
                     value  => $2,
@@ -151,15 +151,141 @@ Parse the data provided by a previous call to either C<input> or C<slurp_file>.
 The methods described above are provided by L<Parse::Eyapp::Driver>. You may
 be able to find some other useful methods described there.
 
+=head1 FORMAT
+
+The PAP format is intended to provide a human-readable as well as parsable
+format for profiling data. The structure of a PAP file is:
+
+  <HEADER>
+  <SAMPLES>
+  [<FOOTER>]
+
+=head2 C<HEADER>
+
+The C<HEADER> consists of:
+
+  <VERSION LINE>
+  [<YAML>]
+  [<SAMPLE COUNT>]
+
+The C<HEADER> must start with a C<VERSION LINE>, reading
+
+  PAP Version 1
+
+In addition to this, it is possible to embed additional data in the C<YAML>
+section as YAML enclosed in lines with the chars C<"  ---"> and C<"  ...">.
+The YAML data must be indented with exactly two spaces like so:
+
+  PAP Version 1
+    ---
+    host: my.server.com
+    testdate: 2011-01-01
+    ...
+
+The intent with the YAML section is to provide additional data that can be
+used for subsequent statistics or classification, but the generator of the
+file may insert any data it deems useful.
+
+Finally, the number of samples in the file should be provided in the section
+C<SAMPLE COUNT>. This section must be present - either here or at the very end
+of the file. The C<SAMPLE COUNT> section follows this format:
+
+  1..<NUMBER OF SAMPLES>
+
+Where C<NUMBER OF SAMPLES> is the number of sample lines provided in the file.
+It is an error to have no samples in a file, so you can't let C<SAMPLE COUNT>
+be C<1..0>.
+
+=head2 C<SAMPLES>
+
+Measurements consists of one line with a measurement followed by an optional
+YAML section with extra data relating to this sample. Each sample consists of:
+
+  <HANDLE> ':' <NUMBER> [<UNIT>]
+
+Where the C<HANDLE> must consist of alphanumeric chars, the number may be
+either an integer (e.g. 424519), a decimal number (e.g. 31.938) or a floating
+point number (e.g. 1.432e-5). The unit provided can be any sequence of non-
+whitespace chars and is used for informational purposes only. (It is generally
+good practice to tell what units you are using.)
+
+An example of a sample with an additional YAML section:
+
+  throughput: 1.87 mbps
+    ---
+    build: version-1.4
+    hostname: bromine
+    ...
+
+There must be at least one sample in the C<SAMPLES> section.
+
+=head2 C<FOOTER>
+
+The C<FOOTER> section only contains a C<SAMPLE COUNT>:
+
+  <SAMPLE COUNT>
+
+This section is optional and must be provided if there is no C<SAMPLE COUNT>
+in the C<HEADER> section.
+
+=head2 Example
+
+A small example with the sample count at the bottom:
+
+  PAP Version 1
+    ---
+    database: hexen
+    sample counts:
+      - 10
+      - 20
+      - 40
+      - 80
+    ...
+  table_scan: 14 seconds
+    ---
+    query: select * from bigtable
+    start_time: 2011-01-01 14:23:38
+    ...
+  1..1
+
+The above provides the following data structure:
+
+  {
+    count => 1,
+    database => "hexen",
+    "sample counts" => [10, 20, 40, 80],
+    samples => [
+          {
+            handle     => "table_scan",
+            query      => "select * from bigtable",
+            start_time => "2011-01-01 14:23:38",
+            unit       => "seconds",
+            value      => 14,
+          },
+        ],
+    version => 1,
+  }
+
+
+=head2 Caveats
+
+The top level of any YAML section (either in the header or in
+a sample) must be associative.
+
+The parser can't currently be expected to complain about mismatch between the
+C<SAMPLE COUNT> and the actual number of samples.
+
 =head1 AUTHOR
 
-"Michael Zedeler", C<< <"michael at zedeler.dk"> >>
+"Michael Zedeler", C<michael at zedeler.dk>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-pap-parser at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=PAP-Parser>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
+Please report any bugs or feature requests to C<michael at zedeler.dk>, or through
+the issue tracker at L<http://github.com/mzedeler/PAP-Parser/>.
+
+If you find a bug, I prefer if you write a test case, clone PAP-Parser from Github,
+push your test and send a pull request along with the bug report.
 
 =head1 SUPPORT
 
@@ -167,28 +293,6 @@ You can find documentation for this module with the perldoc command.
 
     perldoc PAP::Parser
 
-
-You can also look for information at:
-
-=over 4
-
-=item * RT: CPAN's request tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=PAP-Parser>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/PAP-Parser>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/PAP-Parser>
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/PAP-Parser/>
-
-=back
 
 =head1 ACKNOWLEDGEMENTS
 
