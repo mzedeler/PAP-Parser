@@ -75,7 +75,7 @@ use strict;
 use warnings;
 use Carp 'croak';
 use YAML::Any 'Load';
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 # Custom lexer ############################################################## #
@@ -122,7 +122,7 @@ PAP::Parser - Profile Anything Protocol Parser
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02.
 
 =head1 SYNOPSIS
 
